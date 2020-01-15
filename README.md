@@ -6,7 +6,7 @@ Each mixer has two tracks, starting and fading to the unactive track when the ac
 Each track has filter and delay effects (both default to 0 wetness i.e. "off").
 These effects can be adjusted dynamically to create better fades than the standard equal-power crossfade
 that is currently implemented. Or can be set to other constant values, e.g. for a filter for the voice mixer.
-The webaudio api graph is like so:
+The webaudio api graph is like so (only one track in one mixer is shown):
 
 <img src="images/graph.png">
 
