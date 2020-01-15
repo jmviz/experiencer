@@ -14,7 +14,7 @@ class Mixer {
     this.transRes = 0.05; // seconds
     this.isTransitioning = false;
     this.activeTrack = this.trackA = trackA;
-    this.unactiveTrack = this.trackB = trackB;
+    this.inactiveTrack = this.trackB = trackB;
     this.xfade = new Xfade(trackA.out, trackB.out, 0);
     this.playlist = new Playlist();
     this.vol = audioCtx.createGain();
@@ -60,12 +60,12 @@ class Mixer {
     } else {
       this.xfade.fadeToB(this.transDur);
     }
-    setTimeout(this.change.bind(this), 1000 * this.transDur, this.unactiveTrack);
+    setTimeout(this.change.bind(this), 1000 * this.transDur, this.inactiveTrack);
   }
   swapActiveTrack() {
     let temp = this.activeTrack;
-    this.activeTrack = this.unactiveTrack;
-    this.unactiveTrack = temp;
+    this.activeTrack = this.inactiveTrack;
+    this.inactiveTrack = temp;
   }
   checkForActiveTrackEnd() {
     let audio = this.activeTrack.audio;
@@ -81,11 +81,11 @@ class Mixer {
   }
   play() {
     this.activeTrack.play();
-    if (this.isTransitioning) this.unactiveTrack.play();
+    if (this.isTransitioning) this.inactiveTrack.play();
   }
   pause() {
     this.activeTrack.pause();
-    if (this.isTransitioning) this.unactiveTrack.pause();
+    if (this.isTransitioning) this.inactiveTrack.pause();
   }
 }
 
