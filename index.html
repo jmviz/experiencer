@@ -5,18 +5,16 @@
 </head>
 
 <div id="mixer0" class="mixer">
-  <button data-playing="false" class="control play" role="switch">
+
+  <input type="file" class="control browser" webkitdirectory multiple/>
+
+  <button data-playing="false" class="control play">
     play/pause
   </button>
 
-  <input type="range" class="control xfade" min="0" max="1" value="0" list="xfade-vals" step="0.01"/>
-  <!-- for tick locations on slider: -->
-  <datalist id="xfade-vals">
-    <option value="0.0" label="min">
-    <!-- <option value="0.5" label="mid"> -->
-    <option value="1.0" label="max">
-  </datalist>
-  <label for="xfade0">crossfade</label>
+  <button class="control skip">
+    skip
+  </button>
 
   <input type="range" class="control vol" min="0" max="1" value="1" list="vol-vals" step="0.01"/>
   <datalist id="vol-vals">
@@ -25,25 +23,22 @@
   </datalist>
   <label for="vol">volume</label>
 
-  <!-- for src url explanation see https://stackoverflow.com/a/43881141/10658294 -->
-  <!-- <audio class="track0" src="https://cors-anywhere.herokuapp.com/https://www.mediacollege.com/audio/tone/files/250Hz_44100Hz_16bit_30sec.mp3" crossorigin="anonymous" ></audio>
-  <audio class="track1" src="https://cors-anywhere.herokuapp.com/https://www.mediacollege.com/audio/tone/files/440Hz_44100Hz_16bit_30sec.mp3" crossorigin="anonymous" ></audio> -->
-  <audio class="track0" src="https://cors-anywhere.herokuapp.com/http://www.hochmuth.com/mp3/Haydn_Cello_Concerto_D-1.mp3" crossorigin="anonymous" ></audio>
-  <audio class="track1" src="https://cors-anywhere.herokuapp.com/http://www.hochmuth.com/mp3/Tchaikovsky_Rococo_Var_orch.mp3" crossorigin="anonymous" ></audio>
+  <audio class="trackA" crossorigin="anonymous" ></audio>
+  <audio class="trackB" crossorigin="anonymous" ></audio>
 
 </div>
 
 <div id="mixer1" class="mixer">
-  <button data-playing="false" class="control play" role="switch">
+
+  <input type="file" class="control browser" webkitdirectory multiple/>
+
+  <button data-playing="false" class="control play">
     play/pause
   </button>
 
-  <input type="range" class="control xfade" min="0" max="1" value="0" list="xfade-vals" step="0.01"/>
-  <datalist id="xfade-vals">
-    <option value="0.0" label="min">
-    <option value="1.0" label="max">
-  </datalist>
-  <label for="xfade0">crossfade</label>
+  <button class="control skip">
+    skip
+  </button>
 
   <input type="range" class="control vol" min="0" max="1" value="1" list="vol-vals" step="0.01"/>
   <datalist id="vol-vals">
@@ -52,10 +47,8 @@
   </datalist>
   <label for="vol">volume</label>
 
-  <!-- <audio class="track0" src="https://cors-anywhere.herokuapp.com/https://www.mediacollege.com/audio/tone/files/100Hz_44100Hz_16bit_30sec.mp3" crossorigin="anonymous" ></audio>
-  <audio class="track1" src="https://cors-anywhere.herokuapp.com/https://www.mediacollege.com/audio/tone/files/1kHz_44100Hz_16bit_30sec.mp3" crossorigin="anonymous" ></audio> -->
-  <audio class="track0" src="https://cors-anywhere.herokuapp.com/http://www.hochmuth.com/mp3/Vivaldi_Sonata_eminor_.mp3" crossorigin="anonymous" ></audio>
-  <audio class="track1" src="https://cors-anywhere.herokuapp.com/http://www.hochmuth.com/mp3/Tchaikovsky_Nocturne__orch.mp3" crossorigin="anonymous" ></audio>
+  <audio class="trackA" crossorigin="anonymous" ></audio>
+  <audio class="trackB" crossorigin="anonymous" ></audio>
 
 </div>
 
