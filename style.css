@@ -13,15 +13,13 @@ video.active {
 }
 
 video.inactive {
-  filter:opacity(0%);
+  filter: opacity(0%);
 }
 
 #control-container {
   position:fixed;
   bottom: 10%;
   left: 0;
-}
-
-.hidden {
-  display: none;
+  opacity: 0;
+  transition: opacity 2s;
 }

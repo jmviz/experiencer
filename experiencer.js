@@ -232,15 +232,12 @@ mixer2 = new Mixer("mixer2", "video",
 class ControlsUI {
   constructor(id) {
     this.div = document.getElementById(id);
-    // this.mouseIsInDiv = false;
-    // this.div.onmouseover = () => {this.mouseIsInDiv = true;};
-    // this.div.onmouseout = () => {this.mouseIsInDiv = false;};
     this.mouseStopChecker = null;
     document.onmousemove = () => {
-      this.div.classList.remove("hidden");
+      this.div.style.opacity = 1;
       clearTimeout(this.mouseStopChecker);
       this.mouseStopChecker = setTimeout(
-        () => {this.div.classList.add("hidden");}, 2000);
+        () => {this.div.style.opacity = 0;}, 2000);
     };
   }
 }
