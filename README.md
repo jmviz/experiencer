@@ -3,7 +3,9 @@
 Two audio mixers and one video mixer, with basic controls.
 
 TODO:
-* Seek
+* Metadata
+* Images
+* Styling
 * Settings
 
 To run it on a local server, enter experiencer directory, then, with python 3 installed:

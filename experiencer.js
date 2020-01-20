@@ -36,6 +36,8 @@ class Mixer {
     this.transRes = 0.05; // seconds
     this.isTransitioning = false;
     this.activeTrack = activeTrack;
+    this.activeTrack.media.addEventListener("timeupdate", () => this.updateSeekBar(), false);
+    this.activeTrack.media.addEventListener("durationchange", () => this.seekSetup(), false);
     this.inactiveTrack = inactiveTrack;
     this.playlist = new Playlist(type);
     this.vol = audioCtx.createGain();
@@ -46,10 +48,14 @@ class Mixer {
     this.browser.addEventListener("change", () => this.initiatePlaylist(this.browser.files), false);
     this.playButton = document.querySelector("#" + id + " .control.play");
     this.playButton.addEventListener("click", () => this.togglePlayButton(), false);
+    this.seekBar = document.querySelector("#" + id + " .control.seek");
+    this.seekBar.addEventListener("input", () => this.seek(), false);
+    this.seekTime = document.querySelector("#" + id + " .time.current");
+    this.seekDuration = document.querySelector("#" + id + " .time.duration");
     this.skipButton = document.querySelector("#" + id + " .control.skip");
     this.skipButton.addEventListener("click", () => this.transition(), false);
-    this.volSlider = document.querySelector("#" + id + " .control.vol");
-    this.volSlider.addEventListener("input", () => this.setVol(this.volSlider.value), false);
+    this.volBar = document.querySelector("#" + id + " .control.vol");
+    this.volBar.addEventListener("input", () => this.setVol(this.volBar.value), false);
   }
   initiatePlaylist(files) {
     this.playlist.clear();
@@ -69,6 +75,21 @@ class Mixer {
       this.pause();
       this.playButton.dataset.playing = "false";
     }
+  }
+  seekSetup() {
+    this.seekBar.max = this.activeTrack.media.duration;
+  }
+  seek() {
+    this.isSeeking = true;
+    this.activeTrack.media.currentTime = this.seekBar.value;
+    this.isSeeking = false;
+  }
+  updateSeekBar() {
+    if (!this.isSeeking) {
+      this.seekBar.value = this.activeTrack.media.currentTime;
+    }
+    this.seekTime.innerHTML = this.activeTrack.currentTimeString();
+    this.seekDuration.innerHTML = this.activeTrack.durationString();
   }
   transition() {
     if (this.isTransitioning) return;
@@ -98,6 +119,10 @@ class Mixer {
     let temp = this.activeTrack;
     this.activeTrack = this.inactiveTrack;
     this.inactiveTrack = temp;
+    this.inactiveTrack.media.removeEventListener("timeupdate", () => this.updateSeekBar(), false);
+    this.inactiveTrack.media.removeEventListener("durationchange", () => this.seekSetup(), false);
+    this.activeTrack.media.addEventListener("timeupdate", () => this.updateSeekBar(), false);
+    this.activeTrack.media.addEventListener("durationchange", () => this.seekSetup(), false);
   }
   checkForActiveTrackEnd() {
     let media = this.activeTrack.media;
@@ -183,6 +208,22 @@ class Track {
   pause() {
     this.media.pause();
   }
+  secondsToString(s) {
+    let padTime = t => t < 10 ? "0" + t : t;
+    if (typeof s !== "number") return "";
+    if (s < 0) s = Math.abs(s);
+    let hours = Math.floor(s / 3600);
+    let minutes = Math.floor((s % 3600) / 60);
+    let seconds = Math.floor(s % 60);
+    let hour = hours > 0 ? padTime(hours) + ":" : "";
+    return hour + padTime(minutes) + ":" + padTime(seconds);
+  }
+  currentTimeString() {
+    return this.secondsToString(this.media.currentTime);
+  }
+  durationString() {
+    return this.secondsToString(this.media.duration);
+  }
 }
 
 class Xfade {
@@ -232,12 +273,29 @@ mixer2 = new Mixer("mixer2", "video",
 class ControlsUI {
   constructor(id) {
     this.div = document.getElementById(id);
-    this.mouseStopChecker = null;
+    this.controlsFadeOut = null;
+    this.cursorHide = null;
+    this.controlsHide = null;
     document.onmousemove = () => {
       this.div.style.opacity = 1;
-      clearTimeout(this.mouseStopChecker);
-      this.mouseStopChecker = setTimeout(
-        () => {this.div.style.opacity = 0;}, 2000);
+      document.body.style.cursor = "auto";
+      this.div.classList.remove("hidden");
+      clearTimeout(this.controlsFadeOut);
+      clearTimeout(this.cursorHide);
+      clearTimeout(this.controlsHide);
+      this.controlsFadeOut = setTimeout(
+        () => {
+          this.div.style.opacity = 0;
+        }, 2000);
+      this.controlsHide = setTimeout(
+        () => {
+          this.div.classList.add("hidden");
+          document.body.style.cursor = "none";
+        }, 4000);
+      this.cursorHide = setTimeout(
+        () => {
+          document.body.style.cursor = "none";
+        }, 4100);
     };
   }
 }
