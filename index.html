@@ -2,55 +2,94 @@
 
 <head>
   <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="style.css" />
 </head>
 
-<div id="mixer0" class="mixer">
+<div id="control-container" class="hidden">
+  <div id="mixer0" class="mixer">
 
-  <input type="file" class="control browser" webkitdirectory multiple/>
+    <input type="file" class="control browser" webkitdirectory multiple/>
 
-  <button data-playing="false" class="control play">
-    play/pause
-  </button>
+    <!-- <label>
+      seek
+      <input type="range" class="control seek" min="0" value="0" step="0.01"/>
+    </label> -->
 
-  <button class="control skip">
-    skip
-  </button>
+    <button data-playing="false" class="control play">
+      play/pause
+    </button>
 
-  <input type="range" class="control vol" min="0" max="1" value="1" list="vol-vals" step="0.01"/>
-  <datalist id="vol-vals">
-    <option value="0" label="min">
-    <option value="1" label="max">
-  </datalist>
-  <label for="vol">volume</label>
+    <button class="control skip">
+      skip
+    </button>
 
-  <audio class="trackA" crossorigin="anonymous" ></audio>
-  <audio class="trackB" crossorigin="anonymous" ></audio>
+    <label>
+      volume
+      <input type="range" class="control vol" min="0" max="1" value="1" list="vol-vals" step="0.01"/>
+      <datalist id="vol-vals">
+        <option value="0" label="min">
+        <option value="1" label="max">
+      </datalist>
+    </label>
+
+    <audio class="active" crossorigin="anonymous"></audio>
+    <audio class="inactive" crossorigin="anonymous"></audio>
+
+  </div>
+
+  <div id="mixer1" class="mixer">
+
+    <input type="file" class="control browser" webkitdirectory multiple/>
+
+    <button data-playing="false" class="control play">
+      play/pause
+    </button>
+
+    <button class="control skip">
+      skip
+    </button>
+
+    <label>
+      volume
+      <input type="range" class="control vol" min="0" max="1" value="1" list="vol-vals" step="0.01"/>
+      <datalist id="vol-vals">
+        <option value="0" label="min">
+        <option value="1" label="max">
+      </datalist>
+    </label>
+
+    <audio class="active" crossorigin="anonymous"></audio>
+    <audio class="inactive" crossorigin="anonymous"></audio>
+
+  </div>
+
+  <div id="mixer2" class="mixer">
+
+    <input type="file" class="control browser" webkitdirectory multiple/>
+
+    <button data-playing="false" class="control play">
+      play/pause
+    </button>
+
+    <button class="control skip">
+      skip
+    </button>
+
+    <label>
+      volume
+      <input type="range" class="control vol" min="0" max="1" value="1" list="vol-vals" step="0.01"/>
+      <datalist id="vol-vals">
+        <option value="0" label="min">
+        <option value="1" label="max">
+      </datalist>
+    </label>
+
+  </div>
 
 </div>
 
-<div id="mixer1" class="mixer">
-
-  <input type="file" class="control browser" webkitdirectory multiple/>
-
-  <button data-playing="false" class="control play">
-    play/pause
-  </button>
-
-  <button class="control skip">
-    skip
-  </button>
-
-  <input type="range" class="control vol" min="0" max="1" value="1" list="vol-vals" step="0.01"/>
-  <datalist id="vol-vals">
-    <option value="0" label="min">
-    <option value="1" label="max">
-  </datalist>
-  <label for="vol">volume</label>
-
-  <audio class="trackA" crossorigin="anonymous" ></audio>
-  <audio class="trackB" crossorigin="anonymous" ></audio>
-
-</div>
+<video class="active" crossorigin="anonymous"></video>
+<video class="inactive" crossorigin="anonymous"></video>
 
 <script src="experiencer.js"></script>
 

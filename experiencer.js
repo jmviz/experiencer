@@ -1,25 +1,47 @@
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var audioCtx = new AudioContext();
 
+var compressor = audioCtx.createDynamicsCompressor();
+compressor.threshold.setValueAtTime(0, audioCtx.currentTime);
+compressor.knee.setValueAtTime(9, audioCtx.currentTime);
+compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+compressor.attack.setValueAtTime(0.01, audioCtx.currentTime);
+compressor.release.setValueAtTime(0.02, audioCtx.currentTime);
+compressor.connect(audioCtx.destination);
+
 function equalPowerCurve(x) {
   return Math.cos(x * 0.5 * Math.PI);
 }
 
-var upCurve = Array(101).fill(0).map((x, y) => equalPowerCurve(1 - (x + y * 0.01)));
-var downCurve = Array(101).fill(0).map((x, y) => equalPowerCurve(x + y * 0.01));
+var upEqualPowerCurve = Array(101).fill(0).map((x, y) => equalPowerCurve(1 - (x + y * 0.01)));
+var downEqualPowerCurve = Array(101).fill(0).map((x, y) => equalPowerCurve(x + y * 0.01));
+var incomingLowpass = false;
+var filterInCurve, filterOutCurve;
+if (incomingLowpass) {
+  filterInCurve = Array(101).fill(0).map((x, y) => 300 + (20000 - 300) * (x + y * 0.01));
+  filterOutCurve = Array(101).fill(0).map((x, y) => 1000 * (x + y * 0.01));
+} else {
+  filterInCurve = Array(101).fill(0).map((x, y) => 1000 * (1 - (x + y * 0.01)));
+  filterOutCurve = Array(101).fill(0).map((x, y) => 300 + (20000 - 300) * (1 - (x + y * 0.01)));
+}
 
 class Mixer {
-  constructor(id, trackA, trackB) {
-    this.transDur = 20; // seconds
+  constructor(id, type, activeTrack, inactiveTrack, transDur = 7.5) {
+    this.type = type;
+    if (type == "video") {
+      activeTrack.media.style.transition = `filter ${transDur}s`;
+      inactiveTrack.media.style.transition = `filter ${transDur}s`;
+    }
+    this.transDur = transDur; // seconds
     this.transRes = 0.05; // seconds
     this.isTransitioning = false;
-    this.activeTrack = this.trackA = trackA;
-    this.inactiveTrack = this.trackB = trackB;
-    this.xfade = new Xfade(trackA.out, trackB.out, 0);
-    this.playlist = new Playlist();
+    this.activeTrack = activeTrack;
+    this.inactiveTrack = inactiveTrack;
+    this.playlist = new Playlist(type);
     this.vol = audioCtx.createGain();
-    this.xfade.connect(this.vol);
-    this.vol.connect(audioCtx.destination);
+    activeTrack.out.connect(this.vol);
+    inactiveTrack.out.connect(this.vol);
+    this.vol.connect(compressor);
     this.browser = document.querySelector("#" + id + " .control.browser");
     this.browser.addEventListener("change", () => this.initiatePlaylist(this.browser.files), false);
     this.playButton = document.querySelector("#" + id + " .control.play");
@@ -32,8 +54,8 @@ class Mixer {
   initiatePlaylist(files) {
     this.playlist.clear();
     this.playlist.read(files);
-    this.change(this.trackA);
-    this.change(this.trackB);
+    this.change(this.activeTrack);
+    this.change(this.inactiveTrack);
   }
   togglePlayButton() {
     if (audioCtx.state === "suspended") {
@@ -55,10 +77,20 @@ class Mixer {
     this.swapActiveTrack();
     this.activeTrack.play();
     this.activeTrackEndChecker = setInterval(this.checkForActiveTrackEnd.bind(this), 1000 * this.transRes);
-    if (this.activeTrack == this.trackA) {
-      this.xfade.fadeToA(this.transDur);
+    this.activeTrack.out.gain.setValueCurveAtTime(upEqualPowerCurve, audioCtx.currentTime, this.transDur);
+    this.inactiveTrack.out.gain.setValueCurveAtTime(downEqualPowerCurve, audioCtx.currentTime, this.transDur);
+    if (incomingLowpass) {
+      this.activeTrack.highpassFilter.frequency.setValueAtTime(0, audioCtx.currentTime);
+      this.activeTrack.lowpassFilter.frequency.setValueCurveAtTime(filterInCurve, audioCtx.currentTime, this.transDur);
+      this.inactiveTrack.highpassFilter.frequency.setValueCurveAtTime(filterOutCurve, audioCtx.currentTime, this.transDur);
     } else {
-      this.xfade.fadeToB(this.transDur);
+      this.activeTrack.lowpassFilter.frequency.setValueAtTime(22000, audioCtx.currentTime);
+      this.activeTrack.highpassFilter.frequency.setValueCurveAtTime(filterInCurve, audioCtx.currentTime, this.transDur);
+      this.inactiveTrack.lowpassFilter.frequency.setValueCurveAtTime(filterOutCurve, audioCtx.currentTime, this.transDur);
+    }
+    if (this.type == "video") {
+      this.inactiveTrack.media.style.filter = `opacity(0%)`;
+      this.activeTrack.media.style.filter = `opacity(100%)`;
     }
     setTimeout(this.change.bind(this), 1000 * this.transDur, this.inactiveTrack);
   }
@@ -68,13 +100,13 @@ class Mixer {
     this.inactiveTrack = temp;
   }
   checkForActiveTrackEnd() {
-    let audio = this.activeTrack.audio;
-    let timeLeft = audio.duration - audio.currentTime;
+    let media = this.activeTrack.media;
+    let timeLeft = media.duration - media.currentTime;
     if (timeLeft <= this.transDur + this.transRes) this.transition();
   }
   change(track) {
     this.isTransitioning = false;
-    track.audio.src = this.playlist.next();
+    track.media.src = this.playlist.next();
   }
   setVol(v) {
     this.vol.gain.value = v;
@@ -90,14 +122,16 @@ class Mixer {
 }
 
 class Playlist {
-  constructor(files) {
+  constructor(type, files) {
+    this.type = type;
     this.urls = [];
     this.i = 0;
     if (files) this.read(files);
   }
   read(files) {
     for (let file of files) {
-      if (/^audio/.test(file.type)) {
+      let re = (this.type == "audio") ? /^audio\// : /^video\//;
+      if (re.test(file.type)) {
         this.urls.push(URL.createObjectURL(file));
       }
     }
@@ -116,12 +150,19 @@ class Playlist {
 }
 
 class Track {
-  constructor(audio) {
-    this.audio = audio;
-    this.source = audioCtx.createMediaElementSource(audio);
-    this.filter = audioCtx.createBiquadFilter();
-    this.source.connect(this.filter);
-    this.filterDryWet = new Xfade(this.source, this.filter, 0);
+  constructor(media) {
+    this.media = media;
+    this.source = audioCtx.createMediaElementSource(media);
+    this.highpassFilter = audioCtx.createBiquadFilter();
+    this.highpassFilter.type = "highpass";
+    this.highpassFilter.frequency.setValueAtTime(0, audioCtx.currentTime);
+    this.source.connect(this.highpassFilter);
+    this.highpassFilterDryWet = new Xfade(this.source, this.highpassFilter, 1);
+    this.lowpassFilter = audioCtx.createBiquadFilter();
+    this.lowpassFilter.type = "lowpass";
+    this.lowpassFilter.frequency.setValueAtTime(22000, audioCtx.currentTime);
+    this.highpassFilterDryWet.connect(this.lowpassFilter);
+    this.lowpassFilterDryWet = new Xfade(this.highpassFilterDryWet, this.lowpassFilter, 1);
     this.delay = audioCtx.createDelay();
     this.delay.delayTime.setValueAtTime(0.5, audioCtx.currentTime);
     this.delayFeedback = audioCtx.createGain();
@@ -131,16 +172,16 @@ class Track {
     this.delay.connect(this.delayFeedback);
     this.delayFeedback.connect(this.delayFilter);
     this.delayFilter.connect(this.delay);
-    this.filterDryWet.connect(this.delay);
-    this.delayDryWet = new Xfade(this.filterDryWet, this.delay, 0);
+    this.lowpassFilterDryWet.connect(this.delay);
+    this.delayDryWet = new Xfade(this.lowpassFilterDryWet, this.delay, 0);
     this.out = audioCtx.createGain();
     this.delayDryWet.connect(this.out);
   }
   play() {
-    this.audio.play();
+    this.media.play();
   }
   pause() {
-    this.audio.pause();
+    this.media.pause();
   }
 }
 
@@ -160,12 +201,12 @@ class Xfade {
     this.bGain.gain.setValueAtTime(equalPowerCurve(1 - x), time);
   }
   fadeToA(duration = 20, time = audioCtx.currentTime) {
-    this.aGain.gain.setValueCurveAtTime(upCurve, time, duration);
-    this.bGain.gain.setValueCurveAtTime(downCurve, time, duration);
+    this.aGain.gain.setValueCurveAtTime(upEqualPowerCurve, time, duration);
+    this.bGain.gain.setValueCurveAtTime(downEqualPowerCurve, time, duration);
   }
   fadeToB(duration = 20, time = audioCtx.currentTime) {
-    this.aGain.gain.setValueCurveAtTime(downCurve, time, duration);
-    this.bGain.gain.setValueCurveAtTime(upCurve, time, duration);
+    this.aGain.gain.setValueCurveAtTime(downEqualPowerCurve, time, duration);
+    this.bGain.gain.setValueCurveAtTime(upEqualPowerCurve, time, duration);
   }
   connect(node) {
     this.aGain.connect(node);
@@ -173,12 +214,35 @@ class Xfade {
   }
 }
 
-mixer0 = new Mixer("mixer0",
-  new Track(document.querySelector("#mixer0 .trackA")),
-  new Track(document.querySelector("#mixer0 .trackB"))
+mixer0 = new Mixer("mixer0", "audio",
+  new Track(document.querySelector("#mixer0 audio.active")),
+  new Track(document.querySelector("#mixer0 audio.inactive"))
 );
 
-mixer1 = new Mixer("mixer1",
-  new Track(document.querySelector("#mixer1 .trackA")),
-  new Track(document.querySelector("#mixer1 .trackB"))
+mixer1 = new Mixer("mixer1", "audio",
+  new Track(document.querySelector("#mixer1 audio.active")),
+  new Track(document.querySelector("#mixer1 audio.inactive"))
 );
+
+mixer2 = new Mixer("mixer2", "video",
+  new Track(document.querySelector("video.active")),
+  new Track(document.querySelector("video.inactive"))
+);
+
+class ControlsUI {
+  constructor(id) {
+    this.div = document.getElementById(id);
+    // this.mouseIsInDiv = false;
+    // this.div.onmouseover = () => {this.mouseIsInDiv = true;};
+    // this.div.onmouseout = () => {this.mouseIsInDiv = false;};
+    this.mouseStopChecker = null;
+    document.onmousemove = () => {
+      this.div.classList.remove("hidden");
+      clearTimeout(this.mouseStopChecker);
+      this.mouseStopChecker = setTimeout(
+        () => {this.div.classList.add("hidden");}, 2000);
+    };
+  }
+}
+
+controls = new ControlsUI("control-container");

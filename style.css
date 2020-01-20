@@ -1,0 +1,27 @@
+video {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 100%;
+  min-height: 100%;
+  z-index: -1;
+}
+
+video.active {
+  filter: opacity(100%);
+}
+
+video.inactive {
+  filter:opacity(0%);
+}
+
+#control-container {
+  position:fixed;
+  bottom: 10%;
+  left: 0;
+}
+
+.hidden {
+  display: none;
+}
