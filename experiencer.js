@@ -255,21 +255,6 @@ class Xfade {
   }
 }
 
-mixer0 = new Mixer("mixer0", "audio",
-  new Track(document.querySelector("#mixer0 audio.active")),
-  new Track(document.querySelector("#mixer0 audio.inactive"))
-);
-
-mixer1 = new Mixer("mixer1", "audio",
-  new Track(document.querySelector("#mixer1 audio.active")),
-  new Track(document.querySelector("#mixer1 audio.inactive"))
-);
-
-mixer2 = new Mixer("mixer2", "video",
-  new Track(document.querySelector("video.active")),
-  new Track(document.querySelector("video.inactive"))
-);
-
 class ControlsUI {
   constructor(id) {
     this.div = document.getElementById(id);
@@ -299,5 +284,20 @@ class ControlsUI {
     };
   }
 }
+
+mixer0 = new Mixer("mixer0", "audio",
+  new Track(document.querySelector("#mixer0 audio.active")),
+  new Track(document.querySelector("#mixer0 audio.inactive"))
+);
+
+mixer1 = new Mixer("mixer1", "audio",
+  new Track(document.querySelector("#mixer1 audio.active")),
+  new Track(document.querySelector("#mixer1 audio.inactive"))
+);
+
+mixer2 = new Mixer("mixer2", "video",
+  new Track(document.querySelector("video.active")),
+  new Track(document.querySelector("video.inactive"))
+);
 
 controls = new ControlsUI("control-container");
