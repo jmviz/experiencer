@@ -2,88 +2,116 @@
 
 <head>
   <meta charset="utf-8">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" type="text/css" href="ranges.css" />
   <link rel="stylesheet" type="text/css" href="style.css" />
 </head>
 
 <div id="control-container">
-  <div id="mixer0" class="mixer">
+  <div id="music-mixer" class="mixer">
 
-    <input type="file" class="control browser" webkitdirectory multiple/>
+    <label>
+      <i class="material-icons">music_note</i>
+      <input type="file" class="control browser" webkitdirectory multiple/>
+    </label>
 
     <button data-playing="false" class="control play">
-      play/pause
+      <i class="material-icons">play_arrow</i>
     </button>
 
     <button class="control skip">
-      skip
+      <i class="material-icons">skip_next</i>
     </button>
 
-    <label>
-      seek
-      <small class="time current"></small>/<small class="time duration"></small>
+    <div class="seek-container">
+      <span class="time current">--:--</span>
       <input type="range" class="control seek" min="0" value="0" step="0.01"/>
-    </label>
+      <span class="time duration">--:--</span>
+    </div>
 
-    <label>
-      volume
-      <input type="range" class="control vol" min="0" max="1" value="1" step="0.01"/>
-    </label>
+    <button data-muted="false" class="control mute">
+      <i class="material-icons">volume_up</i>
+    </button>
+    <input type="range" class="control vol" min="0" max="1" value="1" step="0.01"/>
 
     <audio class="active" crossorigin="anonymous"></audio>
     <audio class="inactive" crossorigin="anonymous"></audio>
 
   </div>
 
-  <div id="mixer1" class="mixer">
+  <div id="speech-mixer" class="mixer">
 
-    <input type="file" class="control browser" webkitdirectory multiple/>
+    <label>
+      <i class="material-icons">record_voice_over</i>
+      <input type="file" class="control browser" webkitdirectory multiple/>
+    </label>
 
     <button data-playing="false" class="control play">
-      play/pause
+      <i class="material-icons">play_arrow</i>
     </button>
 
     <button class="control skip">
-      skip
+      <i class="material-icons">skip_next</i>
     </button>
 
-    <label>
-      seek
-      <small class="time current"></small>/<small class="time duration"></small>
+    <div class="seek-container">
+      <span class="time current">--:--</span>
       <input type="range" class="control seek" min="0" value="0" step="0.01"/>
-    </label>
+      <span class="time duration">--:--</span>
+    </div>
 
-    <label>
-      volume
-      <input type="range" class="control vol" min="0" max="1" value="1" step="0.01"/>
-    </label>
+    <button data-muted="false" class="control mute">
+      <i class="material-icons">volume_up</i>
+    </button>
+    <input type="range" class="control vol" min="0" max="1" value="1" step="0.01"/>
 
     <audio class="active" crossorigin="anonymous"></audio>
     <audio class="inactive" crossorigin="anonymous"></audio>
 
   </div>
 
-  <div id="mixer2" class="mixer">
+  <div id="video-mixer" class="mixer">
 
-    <input type="file" class="control browser" webkitdirectory multiple/>
+    <label>
+      <i class="material-icons">movie</i>
+      <input type="file" class="control browser" webkitdirectory multiple/>
+    </label>
 
     <button data-playing="false" class="control play">
-      play/pause
+      <i class="material-icons">play_arrow</i>
     </button>
 
     <button class="control skip">
-      skip
+      <i class="material-icons">skip_next</i>
     </button>
 
-    <label>
-      seek
-      <small class="time current"></small>/<small class="time duration"></small>
+    <div class="seek-container">
+      <span class="time current">--:--</span>
       <input type="range" class="control seek" min="0" value="0" step="0.01"/>
-    </label>
+      <span class="time duration">--:--</span>
+    </div>
+
+    <button data-muted="false" class="control mute">
+      <i class="material-icons">volume_up</i>
+    </button>
+    <input type="range" class="control vol" min="0" max="1" value="1" step="0.01"/>
+
+  </div>
+
+  <div id="image-mixer" class="mixer">
 
     <label>
-      volume
-      <input type="range" class="control vol" min="0" max="1" value="1" step="0.01"/>
+      <i class="material-icons">photo</i>
+      <input type="file" class="control browser" webkitdirectory multiple/>
     </label>
+
+    <button data-playing="false" class="control play">
+      <i class="material-icons">play_arrow</i>
+    </button>
+
+    <button class="control skip">
+      <i class="material-icons">skip_next</i>
+    </button>
 
   </div>
 
@@ -91,6 +119,20 @@
 
 <video class="active" crossorigin="anonymous"></video>
 <video class="inactive" crossorigin="anonymous"></video>
+
+<!-- default src is transparent 1 pixel PNG, see https://stackoverflow.com/questions/5775469/whats-the-valid-way-to-include-an-image-with-no-src -->
+<div class="img-container">
+  <img
+    src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+    alt="" class="active" crossorigin="anonymous">
+  </img>
+</div>
+<div class="img-container">
+  <img
+    src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+    alt="" class="inactive" crossorigin="anonymous">
+  </img>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.3/jsmediatags.min.js"></script>
 <script src="experiencer.js"></script>

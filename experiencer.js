@@ -26,36 +26,40 @@ if (incomingLowpass) {
 }
 
 class Mixer {
-  constructor(id, type, activeTrack, inactiveTrack, transDur = 7.5) {
+  constructor(id, type, activeTrack, inactiveTrack, transDur = 5, transRes = 0.05) {
     this.type = type;
-    if (type == "video") {
-      activeTrack.media.style.transition = `filter ${transDur}s`;
-      inactiveTrack.media.style.transition = `filter ${transDur}s`;
-    }
     this.transDur = transDur; // seconds
-    this.transRes = 0.05; // seconds
+    this.transRes = transRes; // seconds
     this.isTransitioning = false;
     this.activeTrack = activeTrack;
-    this.activeTrack.media.addEventListener("timeupdate", () => this.updateSeekBar(), false);
-    this.activeTrack.media.addEventListener("durationchange", () => this.seekSetup(), false);
     this.inactiveTrack = inactiveTrack;
     this.playlist = new Playlist(type);
-    this.vol = audioCtx.createGain();
-    activeTrack.out.connect(this.vol);
-    inactiveTrack.out.connect(this.vol);
-    this.vol.connect(compressor);
     this.browser = document.querySelector("#" + id + " .control.browser");
     this.browser.addEventListener("change", () => this.initiatePlaylist(this.browser.files), false);
     this.playButton = document.querySelector("#" + id + " .control.play");
-    this.playButton.addEventListener("click", () => this.togglePlayButton(), false);
-    this.seekBar = document.querySelector("#" + id + " .control.seek");
-    this.seekBar.addEventListener("input", () => this.seek(), false);
-    this.seekTime = document.querySelector("#" + id + " .time.current");
-    this.seekDuration = document.querySelector("#" + id + " .time.duration");
+    this.playButton.addEventListener("click", () => this.togglePlay(), false);
     this.skipButton = document.querySelector("#" + id + " .control.skip");
     this.skipButton.addEventListener("click", () => this.transition(), false);
-    this.volBar = document.querySelector("#" + id + " .control.vol");
-    this.volBar.addEventListener("input", () => this.setVol(this.volBar.value), false);
+    if (type != "image") {
+      this.activeTrack.media.addEventListener("timeupdate", () => this.updateSeekBar(), false);
+      this.activeTrack.media.addEventListener("durationchange", () => this.seekSetup(), false);
+      this.vol = audioCtx.createGain();
+      activeTrack.out.connect(this.vol);
+      inactiveTrack.out.connect(this.vol);
+      this.vol.connect(compressor);
+      this.seekBar = document.querySelector("#" + id + " .control.seek");
+      this.seekBar.addEventListener("input", () => this.seek(), false);
+      this.seekTime = document.querySelector("#" + id + " .time.current");
+      this.seekDuration = document.querySelector("#" + id + " .time.duration");
+      this.muteButton = document.querySelector("#" + id + " .control.mute");
+      this.muteButton.addEventListener("click", () => this.toggleMute(), false);
+      this.volBar = document.querySelector("#" + id + " .control.vol");
+      this.volBar.addEventListener("input", () => this.setVol(this.volBar.value), false);
+    }
+    if (type != "audio") {
+      activeTrack.media.style.transition = `filter ${transDur}s`;
+      inactiveTrack.media.style.transition = `filter ${transDur}s`;
+    }
   }
   initiatePlaylist(files) {
     this.playlist.clear();
@@ -63,18 +67,41 @@ class Mixer {
     this.change(this.activeTrack);
     this.change(this.inactiveTrack);
   }
-  togglePlayButton() {
+  togglePlay() {
     if (audioCtx.state === "suspended") {
       audioCtx.resume();
     }
     if (this.playButton.dataset.playing === "false") {
       this.play();
+      this.playButton.firstElementChild.innerText = "pause";
       this.activeTrackEndChecker = setInterval(this.checkForActiveTrackEnd.bind(this), 1000 * this.transRes);
       this.playButton.dataset.playing = "true";
     } else if (this.playButton.dataset.playing === "true") {
       this.pause();
+      this.playButton.firstElementChild.innerText = "play_arrow";
       this.playButton.dataset.playing = "false";
     }
+  }
+  toggleMute() {
+    if (this.muteButton.dataset.muted === "false") {
+      this.volBeforeMute = this.vol.gain.value;
+      this.vol.gain.setValueAtTime(0, audioCtx.currentTime);
+      this.volBar.value = 0;
+      this.muteButton.firstElementChild.innerText = "volume_off";
+      this.muteButton.dataset.muted = "true";
+    } else if (this.muteButton.dataset.muted === "true") {
+      this.vol.gain.setValueAtTime(this.volBeforeMute, audioCtx.currentTime);
+      this.volBar.value = this.volBeforeMute;
+      this.muteButton.firstElementChild.innerText = "volume_up";
+      this.muteButton.dataset.muted = "false";
+    }
+  }
+  setVol(v) {
+    if (this.muteButton.dataset.muted === "true") {
+      this.muteButton.firstElementChild.innerText = "volume_up";
+      this.muteButton.dataset.muted = "false";
+    }
+    this.vol.gain.setValueAtTime(v, audioCtx.currentTime);
   }
   seekSetup() {
     this.seekBar.max = this.activeTrack.media.duration;
@@ -98,18 +125,19 @@ class Mixer {
     this.swapActiveTrack();
     this.activeTrack.play();
     this.activeTrackEndChecker = setInterval(this.checkForActiveTrackEnd.bind(this), 1000 * this.transRes);
-    this.activeTrack.out.gain.setValueCurveAtTime(upEqualPowerCurve, audioCtx.currentTime, this.transDur);
-    this.inactiveTrack.out.gain.setValueCurveAtTime(downEqualPowerCurve, audioCtx.currentTime, this.transDur);
-    if (incomingLowpass) {
-      this.activeTrack.highpassFilter.frequency.setValueAtTime(0, audioCtx.currentTime);
-      this.activeTrack.lowpassFilter.frequency.setValueCurveAtTime(filterInCurve, audioCtx.currentTime, this.transDur);
-      this.inactiveTrack.highpassFilter.frequency.setValueCurveAtTime(filterOutCurve, audioCtx.currentTime, this.transDur);
+    if (this.type == "audio") {
+      this.activeTrack.out.gain.setValueCurveAtTime(upEqualPowerCurve, audioCtx.currentTime, this.transDur);
+      this.inactiveTrack.out.gain.setValueCurveAtTime(downEqualPowerCurve, audioCtx.currentTime, this.transDur);
+      if (incomingLowpass) {
+        this.activeTrack.highpassFilter.frequency.setValueAtTime(0, audioCtx.currentTime);
+        this.activeTrack.lowpassFilter.frequency.setValueCurveAtTime(filterInCurve, audioCtx.currentTime, this.transDur);
+        this.inactiveTrack.highpassFilter.frequency.setValueCurveAtTime(filterOutCurve, audioCtx.currentTime, this.transDur);
+      } else {
+        this.activeTrack.lowpassFilter.frequency.setValueAtTime(22000, audioCtx.currentTime);
+        this.activeTrack.highpassFilter.frequency.setValueCurveAtTime(filterInCurve, audioCtx.currentTime, this.transDur);
+        this.inactiveTrack.lowpassFilter.frequency.setValueCurveAtTime(filterOutCurve, audioCtx.currentTime, this.transDur);
+      }
     } else {
-      this.activeTrack.lowpassFilter.frequency.setValueAtTime(22000, audioCtx.currentTime);
-      this.activeTrack.highpassFilter.frequency.setValueCurveAtTime(filterInCurve, audioCtx.currentTime, this.transDur);
-      this.inactiveTrack.lowpassFilter.frequency.setValueCurveAtTime(filterOutCurve, audioCtx.currentTime, this.transDur);
-    }
-    if (this.type == "video") {
       this.inactiveTrack.media.style.filter = `opacity(0%)`;
       this.activeTrack.media.style.filter = `opacity(100%)`;
     }
@@ -119,10 +147,12 @@ class Mixer {
     let temp = this.activeTrack;
     this.activeTrack = this.inactiveTrack;
     this.inactiveTrack = temp;
-    this.inactiveTrack.media.removeEventListener("timeupdate", () => this.updateSeekBar(), false);
-    this.inactiveTrack.media.removeEventListener("durationchange", () => this.seekSetup(), false);
-    this.activeTrack.media.addEventListener("timeupdate", () => this.updateSeekBar(), false);
-    this.activeTrack.media.addEventListener("durationchange", () => this.seekSetup(), false);
+    if (this.type != "image") {
+      this.inactiveTrack.media.removeEventListener("timeupdate", () => this.updateSeekBar(), false);
+      this.inactiveTrack.media.removeEventListener("durationchange", () => this.seekSetup(), false);
+      this.activeTrack.media.addEventListener("timeupdate", () => this.updateSeekBar(), false);
+      this.activeTrack.media.addEventListener("durationchange", () => this.seekSetup(), false);
+    }
   }
   checkForActiveTrackEnd() {
     let media = this.activeTrack.media;
@@ -132,9 +162,10 @@ class Mixer {
   change(track) {
     this.isTransitioning = false;
     track.media.src = this.playlist.next();
-  }
-  setVol(v) {
-    this.vol.gain.value = v;
+    if (this.type == "image") {
+      clearInterval(track.currentTimeClock);
+      track.media.currentTime = 0;
+    }
   }
   play() {
     this.activeTrack.play();
@@ -155,7 +186,7 @@ class Playlist {
   }
   read(files) {
     for (let file of files) {
-      let re = (this.type == "audio") ? /^audio\// : /^video\//;
+      let re = new RegExp("^" + this.type + "\\/", "g");
       if (re.test(file.type)) {
         this.urls.push(URL.createObjectURL(file));
       }
@@ -226,6 +257,24 @@ class Track {
   }
 }
 
+class imageTrack {
+  constructor(img, duration = 10, res = 0.05) {
+    this.media = img;
+    this.media.duration = duration;
+    this.media.currentTime = 0;
+    this.res = res;
+  }
+  play() {
+    this.currentTimeClock = setInterval(this.updateCurrentTime.bind(this), 1000 * this.res);
+  }
+  pause() {
+    clearInterval(this.currentTimeClock);
+  }
+  updateCurrentTime() {
+    this.media.currentTime += this.res;
+  }
+}
+
 class Xfade {
   constructor(a, b, x = 0) {
     this.a = a;
@@ -261,43 +310,51 @@ class ControlsUI {
     this.controlsFadeOut = null;
     this.cursorHide = null;
     this.controlsHide = null;
-    document.onmousemove = () => {
-      this.div.style.opacity = 1;
-      document.body.style.cursor = "auto";
-      this.div.classList.remove("hidden");
-      clearTimeout(this.controlsFadeOut);
-      clearTimeout(this.cursorHide);
-      clearTimeout(this.controlsHide);
-      this.controlsFadeOut = setTimeout(
-        () => {
-          this.div.style.opacity = 0;
-        }, 2000);
-      this.controlsHide = setTimeout(
-        () => {
-          this.div.classList.add("hidden");
-          document.body.style.cursor = "none";
-        }, 4000);
-      this.cursorHide = setTimeout(
-        () => {
-          document.body.style.cursor = "none";
-        }, 4100);
-    };
+    document.addEventListener("mousemove", () => this.showHide(), false);
+    document.addEventListener("mouseup", () => this.showHide(), false);
+    document.addEventListener("mousedown", () => this.showHide(), false);
+  }
+  showHide() {
+    this.div.style.opacity = 1;
+    document.body.style.cursor = "auto";
+    this.div.classList.remove("hidden");
+    clearTimeout(this.controlsFadeOut);
+    clearTimeout(this.cursorHide);
+    clearTimeout(this.controlsHide);
+    this.controlsFadeOut = setTimeout(
+      () => {
+        this.div.style.opacity = 0;
+      }, 2000);
+    this.controlsHide = setTimeout(
+      () => {
+        this.div.classList.add("hidden");
+        document.body.style.cursor = "none";
+      }, 4000);
+    this.cursorHide = setTimeout(
+      () => {
+        document.body.style.cursor = "none";
+      }, 4100);
   }
 }
 
-mixer0 = new Mixer("mixer0", "audio",
-  new Track(document.querySelector("#mixer0 audio.active")),
-  new Track(document.querySelector("#mixer0 audio.inactive"))
+musicMixer = new Mixer("music-mixer", "audio",
+  new Track(document.querySelector("#music-mixer audio.active")),
+  new Track(document.querySelector("#music-mixer audio.inactive"))
 );
 
-mixer1 = new Mixer("mixer1", "audio",
-  new Track(document.querySelector("#mixer1 audio.active")),
-  new Track(document.querySelector("#mixer1 audio.inactive"))
+speechMixer = new Mixer("speech-mixer", "audio",
+  new Track(document.querySelector("#speech-mixer audio.active")),
+  new Track(document.querySelector("#speech-mixer audio.inactive"))
 );
 
-mixer2 = new Mixer("mixer2", "video",
+videoMixer = new Mixer("video-mixer", "video",
   new Track(document.querySelector("video.active")),
   new Track(document.querySelector("video.inactive"))
+);
+
+imageMixer = new Mixer("image-mixer", "image",
+  new imageTrack(document.querySelector("img.active")),
+  new imageTrack(document.querySelector("img.inactive")),
 );
 
 controls = new ControlsUI("control-container");
