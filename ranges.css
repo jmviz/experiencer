@@ -1,12 +1,12 @@
 :root {
-  --track-color: rgba(237, 237, 237);
-  --track-border-color: rgb(153, 153, 153, 0.3);
+  --track-color: white;
+  --track-border-color: white;
   --track-height: 3px;
   --track-width: 100%;
   --track-border-radius: 1px;
   --track-border-width: 1px;
-  --thumb-color: rgba(237, 237, 237);
-  --thumb-border-color: rgb(153, 153, 153, 0.3);
+  --thumb-color: white;
+  --thumb-border-color: white;
   --thumb-size: 12px;
   ---thumb-border-width: 0.5px;
   --thumb-border-radius: calc(var(--thumb-size) / 2);

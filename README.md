@@ -1,12 +1,10 @@
 # experiencer
 
-Two audio mixers and one video mixer, with basic controls.
+Simultaneously play music, spoken word, and video or images. 
 
 TODO:
 * Metadata
-* Images
-* Styling
-* Settings
+* Filter button
 
 To run it on a local server, enter experiencer directory, then, with python 3 installed:
 

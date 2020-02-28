@@ -62,10 +62,40 @@ class Mixer {
     }
   }
   initiatePlaylist(files) {
+    if (this.isDisabled) this.enable();
+    if (this.type == "image") {
+      videoMixer.disable();
+    } else if (this.type == "video") {
+      imageMixer.disable();
+    }
     this.playlist.clear();
     this.playlist.read(files);
     this.change(this.activeTrack);
     this.change(this.inactiveTrack);
+  }
+  enable() {
+    this.isDisabled = false;
+    if (this.type != "audio") {
+      this.activeTrack.media.style.filter = `opacity(100%)`;
+      this.inactiveTrack.media.style.filter = `opacity(0%)`;
+    }
+  }
+  disable() {
+    this.isDisabled = true;
+    if (this.playButton.dataset.playing === "true") this.togglePlay();
+    this.activeTrack.media.style.filter = `opacity(0%)`;
+    this.inactiveTrack.media.style.filter = `opacity(0%)`;
+    this.browser.value = "";
+    this.playlist.clear();
+    clearInterval(this.activeTrackEndChecker);
+    if (this.type == "video") {
+      this.activeTrack.media.src = "";
+      this.inactiveTrack.media.src = "";
+
+    } else if (this.type == "image") {
+      this.activeTrack.media.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
+      this.inactiveTrack.media.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
+    }
   }
   togglePlay() {
     if (audioCtx.state === "suspended") {
@@ -181,7 +211,7 @@ class Playlist {
   constructor(type, files) {
     this.type = type;
     this.urls = [];
-    this.i = 0;
+    this.i = -1;
     if (files) this.read(files);
   }
   read(files) {
@@ -191,6 +221,7 @@ class Playlist {
         this.urls.push(URL.createObjectURL(file));
       }
     }
+    this.unplayed = new Set([...Array(this.urls.length).keys()]);
   }
   clear() {
     for (let url of this.urls) {
@@ -199,9 +230,16 @@ class Playlist {
     this.urls = [];
   }
   next() {
-    let i = this.i;
-    this.i = (i + 1) % this.urls.length;
-    return this.urls[i];
+    // // sequential
+    // let i = this.i;
+    // this.i = (i + 1) % this.urls.length;
+    this.unplayed.delete(this.i);
+    if (this.unplayed.size == 0) {
+      this.unplayed = new Set([...Array(this.urls.length).keys()]);
+    }
+    let remaining = Array.from(this.unplayed);
+    this.i =  remaining[Math.floor(Math.random() * remaining.length)];
+    return this.urls[this.i];
   }
 }
 
@@ -257,7 +295,7 @@ class Track {
   }
 }
 
-class imageTrack {
+class ImageTrack {
   constructor(img, duration = 10, res = 0.05) {
     this.media = img;
     this.media.duration = duration;
@@ -353,8 +391,8 @@ videoMixer = new Mixer("video-mixer", "video",
 );
 
 imageMixer = new Mixer("image-mixer", "image",
-  new imageTrack(document.querySelector("img.active")),
-  new imageTrack(document.querySelector("img.inactive")),
+  new ImageTrack(document.querySelector("img.active")),
+  new ImageTrack(document.querySelector("img.inactive")),
 );
 
 controls = new ControlsUI("control-container");
