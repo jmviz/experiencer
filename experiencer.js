@@ -78,6 +78,11 @@ class Mixer {
       activeTrack.media.style.transition = `filter ${transDur}s`;
       inactiveTrack.media.style.transition = `filter ${transDur}s`;
     }
+    if (type == "image") {
+      this.dur = document.querySelector("#" + id + " .setting.duration");
+      this.durBar = document.querySelector("#" + id + " .control.dur");
+      this.durBar.addEventListener("input", () => this.setDur(this.durBar.value), false);
+    }
   }
   initiatePlaylist(files) {
     if (this.isDisabled) this.enable();
@@ -162,6 +167,12 @@ class Mixer {
     this.activeTrack.media.playbackRate = speed;
     this.inactiveTrack.media.playbackRate = speed;
     this.speed.innerHTML = speed.toFixed(2) + "x";
+  }
+  setDur(s) {
+    this.activeTrack.media.duration = s;
+    this.inactiveTrack.media.duration = s;
+    let pad = "&nbsp;".repeat(2 - Math.floor(Math.log10(s)));
+    this.dur.innerHTML = pad + s.toString() + "s";
   }
   seekSetup() {
     this.seekBar.max = this.activeTrack.media.duration;
