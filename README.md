@@ -1,10 +1,9 @@
 # experiencer
 
-Simultaneously play music, spoken word, and video or images. 
+Simultaneously play music, spoken word, and video or images.
 
 TODO:
 * Metadata
-* Filter button
 
 To run it on a local server, enter experiencer directory, then, with python 3 installed:
 

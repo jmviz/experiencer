@@ -46,7 +46,17 @@ class Mixer {
       this.vol = audioCtx.createGain();
       activeTrack.out.connect(this.vol);
       inactiveTrack.out.connect(this.vol);
-      this.vol.connect(compressor);
+      this.highpassFilter = audioCtx.createBiquadFilter();
+      this.highpassFilter.type = "highpass";
+      this.highpassFilter.frequency.setValueAtTime(0, audioCtx.currentTime);
+      this.vol.connect(this.highpassFilter);
+      this.highpassFilterDryWet = new Xfade(this.vol, this.highpassFilter, 1);
+      this.lowpassFilter = audioCtx.createBiquadFilter();
+      this.lowpassFilter.type = "lowpass";
+      this.lowpassFilter.frequency.setValueAtTime(22000, audioCtx.currentTime);
+      this.highpassFilterDryWet.connect(this.lowpassFilter);
+      this.lowpassFilterDryWet = new Xfade(this.highpassFilterDryWet, this.lowpassFilter, 1);
+      this.lowpassFilterDryWet.connect(compressor);
       this.seekBar = document.querySelector("#" + id + " .control.seek");
       this.seekBar.addEventListener("input", () => this.seek(), false);
       this.seekTime = document.querySelector("#" + id + " .time.current");
@@ -55,6 +65,14 @@ class Mixer {
       this.muteButton.addEventListener("click", () => this.toggleMute(), false);
       this.volBar = document.querySelector("#" + id + " .control.vol");
       this.volBar.addEventListener("input", () => this.setVol(this.volBar.value), false);
+      this.HPFBar = document.querySelector("#" + id + " .control.HPF");
+      this.HPFBar.addEventListener("input", () => this.setHPF(this.HPFBar.value), false);
+      this.LPFBar = document.querySelector("#" + id + " .control.LPF");
+      this.LPFBar.addEventListener("input", () => this.setLPF(this.LPFBar.value), false);
+      this.speed = document.querySelector("#" + id + " .setting.speed");
+      this.speedBar = document.querySelector("#" + id + " .control.rate");
+      this.speedBar.addEventListener("input", () => this.setSpeed(this.speedBar.value), false);
+
     }
     if (type != "audio") {
       activeTrack.media.style.transition = `filter ${transDur}s`;
@@ -132,6 +150,18 @@ class Mixer {
       this.muteButton.dataset.muted = "false";
     }
     this.vol.gain.setValueAtTime(v, audioCtx.currentTime);
+  }
+  setHPF(f) {
+    this.highpassFilter.frequency.setValueAtTime(2.2 * Math.pow(10, f), audioCtx.currentTime);
+  }
+  setLPF(f) {
+    this.lowpassFilter.frequency.setValueAtTime(2.2 * Math.pow(10, f), audioCtx.currentTime);
+  }
+  setSpeed(s) {
+    let speed = Math.pow(4, s);
+    this.activeTrack.media.playbackRate = speed;
+    this.inactiveTrack.media.playbackRate = speed;
+    this.speed.innerHTML = speed.toFixed(2) + "x";
   }
   seekSetup() {
     this.seekBar.max = this.activeTrack.media.duration;

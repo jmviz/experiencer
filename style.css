@@ -110,3 +110,22 @@ button:focus {
   height: 1px;
   width: 100px;
 }
+
+.setting {
+  font-size: 8pt;
+}
+
+.filter {
+  height: 1px;
+  width: 100px;
+}
+
+.rate {
+  height: 1px;
+  width: 100;
+}
+
+.speed {
+  font-family: var(--font-family-mono);
+  font-size: 8pt;
+}
