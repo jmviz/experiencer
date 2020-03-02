@@ -69,7 +69,8 @@ class Mixer {
       this.HPFBar.addEventListener("input", () => this.setHPF(this.HPFBar.value), false);
       this.LPFBar = document.querySelector("#" + id + " .control.LPF");
       this.LPFBar.addEventListener("input", () => this.setLPF(this.LPFBar.value), false);
-      this.speed = document.querySelector("#" + id + " .setting.speed");
+      this.speed = 1;
+      this.speedText = document.querySelector("#" + id + " .setting.speed");
       this.speedBar = document.querySelector("#" + id + " .control.rate");
       this.speedBar.addEventListener("input", () => this.setSpeed(this.speedBar.value), false);
 
@@ -163,10 +164,12 @@ class Mixer {
     this.lowpassFilter.frequency.setValueAtTime(2.2 * Math.pow(10, f), audioCtx.currentTime);
   }
   setSpeed(s) {
-    let speed = Math.pow(4, s);
-    this.activeTrack.media.playbackRate = speed;
-    this.inactiveTrack.media.playbackRate = speed;
-    this.speed.innerHTML = speed.toFixed(2) + "x";
+    this.speed = Math.pow(4, s);
+    this.activeTrack.media.playbackRate = this.speed;
+    this.inactiveTrack.media.playbackRate = this.speed;
+    this.activeTrack.media.defaultPlaybackRate = this.speed;
+    this.inactiveTrack.media.defaultPlaybackRate = this.speed;
+    this.speedText.innerHTML = this.speed.toFixed(2) + "x";
   }
   setDur(s) {
     this.activeTrack.media.duration = s;
@@ -218,6 +221,7 @@ class Mixer {
     let temp = this.activeTrack;
     this.activeTrack = this.inactiveTrack;
     this.inactiveTrack = temp;
+    this.seekSetup();
     if (this.type != "image") {
       this.inactiveTrack.media.removeEventListener("timeupdate", () => this.updateSeekBar(), false);
       this.inactiveTrack.media.removeEventListener("durationchange", () => this.seekSetup(), false);
@@ -227,7 +231,7 @@ class Mixer {
   }
   checkForActiveTrackEnd() {
     let media = this.activeTrack.media;
-    let timeLeft = media.duration - media.currentTime;
+    let timeLeft = (media.duration - media.currentTime) / this.speed;
     if (timeLeft <= this.transDur + this.transRes) this.transition();
   }
   change(track) {
