@@ -1,3 +1,5 @@
+var jsmediatags = window.jsmediatags;
+
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var audioCtx = new AudioContext();
 
@@ -39,7 +41,9 @@ class Mixer {
     this.playButton = document.querySelector("#" + id + " .control.play");
     this.playButton.addEventListener("click", () => this.togglePlay(), false);
     this.skipButton = document.querySelector("#" + id + " .control.skip");
-    this.skipButton.addEventListener("click", () => this.transition(), false);
+    this.skipButton.addEventListener("click", () => this.skip(), false);
+    this.speed = 1;
+    this.info = document.querySelector("#" + id + " .info");
     if (type != "image") {
       this.activeTrack.media.addEventListener("timeupdate", () => this.updateSeekBar(), false);
       this.activeTrack.media.addEventListener("durationchange", () => this.seekSetup(), false);
@@ -69,7 +73,6 @@ class Mixer {
       this.HPFBar.addEventListener("input", () => this.setHPF(this.HPFBar.value), false);
       this.LPFBar = document.querySelector("#" + id + " .control.LPF");
       this.LPFBar.addEventListener("input", () => this.setLPF(this.LPFBar.value), false);
-      this.speed = 1;
       this.speedText = document.querySelector("#" + id + " .setting.speed");
       this.speedBar = document.querySelector("#" + id + " .control.rate");
       this.speedBar.addEventListener("input", () => this.setSpeed(this.speedBar.value), false);
@@ -95,6 +98,7 @@ class Mixer {
     this.playlist.clear();
     this.playlist.read(files);
     this.change(this.activeTrack);
+    this.updateInfo(this.activeTrack);
     this.change(this.inactiveTrack);
   }
   enable() {
@@ -134,6 +138,14 @@ class Mixer {
       this.pause();
       this.playButton.firstElementChild.innerText = "play_arrow";
       this.playButton.dataset.playing = "false";
+    }
+  }
+  skip() {
+    if (this.playButton.dataset.playing === "true") {
+      this.transition();
+    } else {
+      this.swapActiveTrack();
+      this.updateSeekBar();
     }
   }
   toggleMute() {
@@ -197,7 +209,7 @@ class Mixer {
     clearInterval(this.activeTrackEndChecker);
     this.isTransitioning = true;
     this.swapActiveTrack();
-    this.activeTrack.play();
+    this.activeTrack.play();  
     this.activeTrackEndChecker = setInterval(this.checkForActiveTrackEnd.bind(this), 1000 * this.transRes);
     if (this.type == "audio") {
       this.activeTrack.out.gain.setValueCurveAtTime(upEqualPowerCurve, audioCtx.currentTime, this.transDur);
@@ -221,12 +233,34 @@ class Mixer {
     let temp = this.activeTrack;
     this.activeTrack = this.inactiveTrack;
     this.inactiveTrack = temp;
-    this.seekSetup();
+    this.updateInfo(this.activeTrack);
     if (this.type != "image") {
+      this.seekSetup();
       this.inactiveTrack.media.removeEventListener("timeupdate", () => this.updateSeekBar(), false);
       this.inactiveTrack.media.removeEventListener("durationchange", () => this.seekSetup(), false);
       this.activeTrack.media.addEventListener("timeupdate", () => this.updateSeekBar(), false);
       this.activeTrack.media.addEventListener("durationchange", () => this.seekSetup(), false);
+    }
+  }
+  updateInfo(track) {
+    if (this.type == "audio") {
+      jsmediatags.read(track.file, {
+        onSuccess: (tag) => {
+          if (tag.tags && tag.tags.artist && tag.tags.title) {
+            this.info.innerHTML = tag.tags.artist + " - " + tag.tags.title;
+          } else {
+            this.info.innerHTML = track.file.name;
+          }
+        },
+        onError: (error) => {
+          let path = track.file.webkitRelativePath;
+          let name = track.file.name;
+          console.log(error.type + ": " + error.info, path ? path : name);
+          this.info.innerHTML = name;
+        }
+      });
+    } else {
+      this.info.innerHTML = track.file.name;
     }
   }
   checkForActiveTrackEnd() {
@@ -236,10 +270,22 @@ class Mixer {
   }
   change(track) {
     this.isTransitioning = false;
-    track.media.src = this.playlist.next();
+    let item = this.playlist.next();
+    track.media.src = item.url;
+    track.file = item.file;
     if (this.type == "image") {
       clearInterval(track.currentTimeClock);
       track.media.currentTime = 0;
+    } else {
+      track.play().then(() => {
+        track.pause();
+      }).catch((error) => {
+        let path = track.file.webkitRelativePath;
+        let name = track.file.name;
+        console.log(error);
+        console.log(path ? path : name);
+        this.change(track);
+      });
     }
   }
   play() {
@@ -255,36 +301,38 @@ class Mixer {
 class Playlist {
   constructor(type, files) {
     this.type = type;
-    this.urls = [];
+    this.items = [];
     this.i = -1;
     if (files) this.read(files);
   }
   read(files) {
+    let re = new RegExp("^" + this.type + "\\/");
     for (let file of files) {
-      let re = new RegExp("^" + this.type + "\\/", "g");
       if (re.test(file.type)) {
-        this.urls.push(URL.createObjectURL(file));
+        let item = {
+          "file": file,
+          "url": URL.createObjectURL(file)
+        };
+        this.items.push(item);
       }
     }
-    this.unplayed = new Set([...Array(this.urls.length).keys()]);
+    this.unplayed = new Set([...Array(this.items.length).keys()]);
   }
   clear() {
-    for (let url of this.urls) {
-      URL.revokeObjectURL(url);
+    for (let item of this.items) {
+      URL.revokeObjectURL(item.url);
     }
-    this.urls = [];
+    this.items = [];
   }
   next() {
-    // // sequential
-    // let i = this.i;
-    // this.i = (i + 1) % this.urls.length;
     this.unplayed.delete(this.i);
     if (this.unplayed.size == 0) {
-      this.unplayed = new Set([...Array(this.urls.length).keys()]);
+      this.unplayed = new Set([...Array(this.items.length).keys()]);
     }
     let remaining = Array.from(this.unplayed);
     this.i =  remaining[Math.floor(Math.random() * remaining.length)];
-    return this.urls[this.i];
+    let item = this.items[this.i];
+    return item;
   }
 }
 
@@ -317,7 +365,7 @@ class Track {
     this.delayDryWet.connect(this.out);
   }
   play() {
-    this.media.play();
+    return this.media.play();
   }
   pause() {
     this.media.pause();
