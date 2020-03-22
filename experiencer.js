@@ -89,13 +89,13 @@ class Mixer {
     }
   }
   initiatePlaylist(files) {
-    if (this.isDisabled) this.enable();
+    this.disable();
+    this.enable();
     if (this.type == "image") {
-      videoMixer.disable();
+      videoMixer.disable(true);
     } else if (this.type == "video") {
-      imageMixer.disable();
+      imageMixer.disable(true);
     }
-    this.playlist.clear();
     this.playlist.read(files);
     this.change(this.activeTrack);
     this.updateInfo(this.activeTrack);
@@ -108,12 +108,14 @@ class Mixer {
       this.inactiveTrack.media.style.filter = `opacity(0%)`;
     }
   }
-  disable() {
+  disable(clearBrowser) {
     this.isDisabled = true;
     if (this.playButton.dataset.playing === "true") this.togglePlay();
-    this.activeTrack.media.style.filter = `opacity(0%)`;
-    this.inactiveTrack.media.style.filter = `opacity(0%)`;
-    this.browser.value = "";
+    if (this.type != "audio") {
+      this.activeTrack.media.style.filter = `opacity(0%)`;
+      this.inactiveTrack.media.style.filter = `opacity(0%)`;
+    }
+    if (clearBrowser) this.browser.value = "";
     this.playlist.clear();
     clearInterval(this.activeTrackEndChecker);
     if (this.type == "video") {
