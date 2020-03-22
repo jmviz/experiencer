@@ -97,9 +97,15 @@ class Mixer {
       imageMixer.disable(true);
     }
     this.playlist.read(files);
-    this.change(this.activeTrack);
-    this.updateInfo(this.activeTrack);
-    this.change(this.inactiveTrack);
+    if (this.playlist.items.length > 0) {
+      this.change(this.activeTrack);
+      this.updateInfo(this.activeTrack);
+      this.change(this.inactiveTrack);
+    }
+    else {
+      this.disable();
+      window.alert(`No ${this.type} files found. Try a different folder.`);
+    }
   }
   enable() {
     this.isDisabled = false;
@@ -128,6 +134,7 @@ class Mixer {
     }
   }
   togglePlay() {
+    if (this.playlist.items.length == 0) return;
     if (audioCtx.state === "suspended") {
       audioCtx.resume();
     }
@@ -143,6 +150,7 @@ class Mixer {
     }
   }
   skip() {
+    if (this.playlist.items.length == 0) return;
     if (this.playButton.dataset.playing === "true") {
       this.transition();
     } else {
@@ -386,7 +394,8 @@ class Track {
     return this.secondsToString(this.media.currentTime);
   }
   durationString() {
-    return this.secondsToString(this.media.duration);
+    let dur = this.media.duration;
+    return isNaN(dur) ? "--:--" : this.secondsToString(dur);
   }
 }
 
