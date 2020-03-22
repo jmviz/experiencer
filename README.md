@@ -2,9 +2,6 @@
 
 Simultaneously play music, spoken word, and video or images.
 
-TODO:
-* Metadata
-
 To run it on a local server, enter experiencer directory, then:
 
 ```
