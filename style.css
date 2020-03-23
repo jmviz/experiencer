@@ -46,14 +46,6 @@ img {
   object-fit: contain;
 }
 
-video.active, img.active {
-  filter: opacity(100%);
-}
-
-video.inactive, img.inactive {
-  filter: opacity(0%);
-}
-
 label {
   cursor: pointer;
   vertical-align: middle;

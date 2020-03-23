@@ -34,7 +34,9 @@ class Mixer {
     this.transRes = transRes; // seconds
     this.isTransitioning = false;
     this.activeTrack = activeTrack;
+    this.activeTrack.mixer = this;
     this.inactiveTrack = inactiveTrack;
+    this.inactiveTrack.mixer = this;
     this.playlist = new Playlist(type);
     this.browser = document.querySelector("#" + id + " .control.browser");
     this.browser.addEventListener("change", () => this.initiatePlaylist(this.browser.files), false);
@@ -79,8 +81,8 @@ class Mixer {
 
     }
     if (type != "audio") {
-      activeTrack.media.style.transition = `filter ${transDur}s`;
-      inactiveTrack.media.style.transition = `filter ${transDur}s`;
+      activeTrack.media.style.transition = `filter 0s`;
+      inactiveTrack.media.style.transition = `filter 0s`;
     }
     if (type == "image") {
       this.dur = document.querySelector("#" + id + " .setting.duration");
@@ -98,9 +100,9 @@ class Mixer {
     }
     this.playlist.read(files);
     if (this.playlist.items.length > 0) {
-      this.change(this.activeTrack);
-      this.updateInfo(this.activeTrack);
-      this.change(this.inactiveTrack);
+      this.activeTrack.change();
+      this.updateInfo();
+      this.inactiveTrack.change();
     }
     else {
       this.disable();
@@ -140,13 +142,22 @@ class Mixer {
     }
     if (this.playButton.dataset.playing === "false") {
       this.play();
+      if (this.type != "audio") {
+        this.activeTrack.media.style.transition = `filter ${this.transDur}s`;
+        this.inactiveTrack.media.style.transition = `filter ${this.transDur}s`;
+      }
       this.playButton.firstElementChild.innerText = "pause";
       this.activeTrackEndChecker = setInterval(this.checkForActiveTrackEnd.bind(this), 1000 * this.transRes);
       this.playButton.dataset.playing = "true";
     } else if (this.playButton.dataset.playing === "true") {
       this.pause();
+      if (this.type != "audio") {
+        this.activeTrack.media.style.transition = `filter 0s`;
+        this.inactiveTrack.media.style.transition = `filter 0s`;
+      }
       this.playButton.firstElementChild.innerText = "play_arrow";
       this.playButton.dataset.playing = "false";
+      
     }
   }
   skip() {
@@ -155,7 +166,15 @@ class Mixer {
       this.transition();
     } else {
       this.swapActiveTrack();
-      this.updateSeekBar();
+      if (this.type != "image") {
+        this.seekSetup();
+        this.updateSeekBar();
+      }
+      if (this.type != "audio") {
+        this.inactiveTrack.media.style.filter = `opacity(0%)`;
+        this.activeTrack.media.style.filter = `opacity(100%)`;
+      }
+      this.inactiveTrack.change();
     }
   }
   toggleMute() {
@@ -219,9 +238,9 @@ class Mixer {
     clearInterval(this.activeTrackEndChecker);
     this.isTransitioning = true;
     this.swapActiveTrack();
-    this.activeTrack.play();  
+    this.activeTrack.play(); 
     this.activeTrackEndChecker = setInterval(this.checkForActiveTrackEnd.bind(this), 1000 * this.transRes);
-    if (this.type == "audio") {
+    if (this.type != "image") {
       this.activeTrack.out.gain.setValueCurveAtTime(upEqualPowerCurve, audioCtx.currentTime, this.transDur);
       this.inactiveTrack.out.gain.setValueCurveAtTime(downEqualPowerCurve, audioCtx.currentTime, this.transDur);
       if (incomingLowpass) {
@@ -233,17 +252,18 @@ class Mixer {
         this.activeTrack.highpassFilter.frequency.setValueCurveAtTime(filterInCurve, audioCtx.currentTime, this.transDur);
         this.inactiveTrack.lowpassFilter.frequency.setValueCurveAtTime(filterOutCurve, audioCtx.currentTime, this.transDur);
       }
-    } else {
+    } 
+    if (this.type != "audio") {
       this.inactiveTrack.media.style.filter = `opacity(0%)`;
       this.activeTrack.media.style.filter = `opacity(100%)`;
     }
-    setTimeout(this.change.bind(this), 1000 * this.transDur, this.inactiveTrack);
+    setTimeout(this.endTransition.bind(this), 1000 * this.transDur);
   }
   swapActiveTrack() {
     let temp = this.activeTrack;
     this.activeTrack = this.inactiveTrack;
     this.inactiveTrack = temp;
-    this.updateInfo(this.activeTrack);
+    this.updateInfo();
     if (this.type != "image") {
       this.seekSetup();
       this.inactiveTrack.media.removeEventListener("timeupdate", () => this.updateSeekBar(), false);
@@ -252,25 +272,25 @@ class Mixer {
       this.activeTrack.media.addEventListener("durationchange", () => this.seekSetup(), false);
     }
   }
-  updateInfo(track) {
+  updateInfo() {
     if (this.type == "audio") {
-      jsmediatags.read(track.file, {
+      jsmediatags.read(this.activeTrack.file, {
         onSuccess: (tag) => {
           if (tag.tags && tag.tags.artist && tag.tags.title) {
             this.info.innerHTML = tag.tags.artist + " - " + tag.tags.title;
           } else {
-            this.info.innerHTML = track.file.name;
+            this.info.innerHTML = this.activeTrack.file.name;
           }
         },
         onError: (error) => {
-          let path = track.file.webkitRelativePath;
-          let name = track.file.name;
-          console.log(error.type + ": " + error.info, path ? path : name);
+          let name = this.activeTrack.file.name;
+          // let path = this.activeTrack.file.webkitRelativePath;
+          // console.log(error.type + ": " + error.info, path ? path : name);
           this.info.innerHTML = name;
         }
       });
     } else {
-      this.info.innerHTML = track.file.name;
+      this.info.innerHTML = this.activeTrack.file.name;
     }
   }
   checkForActiveTrackEnd() {
@@ -278,25 +298,9 @@ class Mixer {
     let timeLeft = (media.duration - media.currentTime) / this.speed;
     if (timeLeft <= this.transDur + this.transRes) this.transition();
   }
-  change(track) {
+  endTransition() {
     this.isTransitioning = false;
-    let item = this.playlist.next();
-    track.media.src = item.url;
-    track.file = item.file;
-    if (this.type == "image") {
-      clearInterval(track.currentTimeClock);
-      track.media.currentTime = 0;
-    } else {
-      track.play().then(() => {
-        track.pause();
-      }).catch((error) => {
-        let path = track.file.webkitRelativePath;
-        let name = track.file.name;
-        console.log(error);
-        console.log(path ? path : name);
-        this.change(track);
-      });
-    }
+    this.inactiveTrack.change();
   }
   play() {
     this.activeTrack.play();
@@ -375,10 +379,25 @@ class Track {
     this.delayDryWet.connect(this.out);
   }
   play() {
-    return this.media.play();
+    this.media.play().catch((error) => {
+      let path = this.file.webkitRelativePath;
+      let name = this.file.name;
+      console.log(error);
+      console.log(path ? path : name);
+      this.change();
+      this.play();
+      if (this == this.mixer.activeTrack) {
+        this.mixer.updateInfo();
+      }
+    });
   }
   pause() {
     this.media.pause();
+  }
+  change() {
+    let item = this.mixer.playlist.next();
+    this.media.src = item.url;
+    this.file = item.file;
   }
   secondsToString(s) {
     let padTime = t => t < 10 ? "0" + t : t;
@@ -411,6 +430,13 @@ class ImageTrack {
   }
   pause() {
     clearInterval(this.currentTimeClock);
+  }
+  change() {
+    let item = this.mixer.playlist.next();
+    this.media.src = item.url;
+    this.file = item.file;
+    clearInterval(this.currentTimeClock);
+    this.media.currentTime = 0;
   }
   updateCurrentTime() {
     this.media.currentTime += this.res;
@@ -480,23 +506,23 @@ class ControlsUI {
 }
 
 musicMixer = new Mixer("music-mixer", "audio",
-  new Track(document.querySelector("#music-mixer audio.active")),
-  new Track(document.querySelector("#music-mixer audio.inactive"))
+  new Track(document.querySelector("#music-mixer audio.a")),
+  new Track(document.querySelector("#music-mixer audio.b"))
 );
 
 speechMixer = new Mixer("speech-mixer", "audio",
-  new Track(document.querySelector("#speech-mixer audio.active")),
-  new Track(document.querySelector("#speech-mixer audio.inactive"))
+  new Track(document.querySelector("#speech-mixer audio.a")),
+  new Track(document.querySelector("#speech-mixer audio.b"))
 );
 
 videoMixer = new Mixer("video-mixer", "video",
-  new Track(document.querySelector("video.active")),
-  new Track(document.querySelector("video.inactive"))
+  new Track(document.querySelector("video.a")),
+  new Track(document.querySelector("video.b"))
 );
 
 imageMixer = new Mixer("image-mixer", "image",
-  new ImageTrack(document.querySelector("img.active")),
-  new ImageTrack(document.querySelector("img.inactive")),
+  new ImageTrack(document.querySelector("img.a")),
+  new ImageTrack(document.querySelector("img.b")),
 );
 
 controls = new ControlsUI("control-container");
