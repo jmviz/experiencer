@@ -321,16 +321,19 @@ class Playlist {
   }
   read(files) {
     let re = new RegExp("^" + this.type + "\\/");
+    let i = 0;
     for (let file of files) {
       if (re.test(file.type)) {
         let item = {
           "file": file,
-          "url": URL.createObjectURL(file)
+          "url": URL.createObjectURL(file),
+          "i": i++
         };
         this.items.push(item);
       }
     }
     this.unplayed = new Set([...Array(this.items.length).keys()]);
+    this.unplayable = new Set();
   }
   clear() {
     for (let item of this.items) {
@@ -340,13 +343,20 @@ class Playlist {
   }
   next() {
     this.unplayed.delete(this.i);
-    if (this.unplayed.size == 0) {
-      this.unplayed = new Set([...Array(this.items.length).keys()]);
-    }
+    if (this.unplayed.size == 0) this.reset();
     let remaining = Array.from(this.unplayed);
     this.i =  remaining[Math.floor(Math.random() * remaining.length)];
     let item = this.items[this.i];
     return item;
+  }
+  ignore(i) {
+    this.unplayable.add(i);
+  }
+  hasNothingPlayable() {
+    return this.unplayable.size >= this.items.length;
+  }
+  reset() {
+    this.unplayed = new Set(this.items.flatMap(x => this.unplayable.has(x.i) ? [] : [x.i]));
   }
 }
 
@@ -384,6 +394,12 @@ class Track {
       let name = this.file.name;
       console.log(error);
       console.log(path ? path : name);
+      this.mixer.playlist.ignore(this.i);
+      if (this.mixer.playlist.hasNothingPlayable()) {
+        this.mixer.disable();
+        window.alert(`None of the ${this.mixer.type} files are playable. Try a different folder.`);
+        return;
+      }
       this.change();
       this.play();
       if (this == this.mixer.activeTrack) {
@@ -398,6 +414,7 @@ class Track {
     let item = this.mixer.playlist.next();
     this.media.src = item.url;
     this.file = item.file;
+    this.i = item.i;
   }
   secondsToString(s) {
     let padTime = t => t < 10 ? "0" + t : t;
@@ -435,6 +452,7 @@ class ImageTrack {
     let item = this.mixer.playlist.next();
     this.media.src = item.url;
     this.file = item.file;
+    this.i = item.i;
     clearInterval(this.currentTimeClock);
     this.media.currentTime = 0;
   }
